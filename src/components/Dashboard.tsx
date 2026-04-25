@@ -1,10 +1,6 @@
 import { useMemo } from 'react'
 import { Task } from '../types'
-import {
-  categoryLabel, categoryColor, statusLabel, statusColor,
-  priorityColor, priorityLabel, activeStatuses,
-} from '../utils/constants'
-import { Badge } from './Badge'
+import { activeStatuses } from '../utils/constants'
 import { TaskCard } from './TaskCard'
 import { AlertTriangle, Clock, CheckCircle2, RefreshCw, Eye, Inbox } from 'lucide-react'
 

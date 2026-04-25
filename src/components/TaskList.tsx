@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Task, TaskCategory, TaskStatus } from '../types'
-import { categoryLabel, statusLabel } from '../utils/constants'
+import { categoryLabel } from '../utils/constants'
 import { TaskCard } from './TaskCard'
 import { Search, Plus } from 'lucide-react'
 

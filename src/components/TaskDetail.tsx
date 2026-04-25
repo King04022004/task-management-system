@@ -23,12 +23,6 @@ const daysUntil = (d: string | null) => {
   return Math.ceil((new Date(d).getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000)
 }
 
-const formatDate = (d: string | null) => {
-  if (!d) return null
-  const dt = new Date(d)
-  return `${dt.getFullYear()}/${dt.getMonth() + 1}/${dt.getDate()}`
-}
-
 // inline editable field
 const EditableText = ({
   value, onChange, placeholder, multiline, className = '',

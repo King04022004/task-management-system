@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { TaskCategory, Priority, ProductionType } from '../types'
-import { categoryLabel, productionTypeLabel } from '../utils/constants'
+import { TaskCategory, Priority } from '../types'
+import { categoryLabel } from '../utils/constants'
 import { Modal } from './Modal'
 
 interface TaskCreateModalProps {
