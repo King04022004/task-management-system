@@ -1,18 +1,18 @@
-import { Project } from '../types'
+import { Task } from '../types'
 
-const STORAGE_KEY = 'projects_v1'
+const KEY = 'tasks_v2'
 
-export const loadProjects = (): Project[] => {
+export const loadTasks = (): Task[] => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Project[]) : []
+    const raw = localStorage.getItem(KEY)
+    return raw ? (JSON.parse(raw) as Task[]) : []
   } catch {
     return []
   }
 }
 
-export const saveProjects = (projects: Project[]): void => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+export const saveTasks = (tasks: Task[]): void => {
+  localStorage.setItem(KEY, JSON.stringify(tasks))
 }
 
 export const generateId = (): string =>

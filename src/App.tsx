@@ -1,126 +1,135 @@
 import { useState } from 'react'
 import { useStore } from './store/useStore'
 import { Dashboard } from './components/Dashboard'
-import { ProjectList } from './components/ProjectList'
-import { ProjectDetail } from './components/ProjectDetail'
-import { ProjectCreateModal } from './components/ProjectCreateModal'
-import { ProjectCategory } from './types'
-import { LayoutDashboard, FolderKanban, Plus } from 'lucide-react'
+import { TaskList } from './components/TaskList'
+import { TaskDetail } from './components/TaskDetail'
+import { TaskCreateModal } from './components/TaskCreateModal'
+import { TaskCategory, Priority } from './types'
+import { LayoutDashboard, ListTodo, Plus } from 'lucide-react'
+import { activeStatuses } from './utils/constants'
 
-type View = 'dashboard' | 'projects' | 'detail'
+type View = 'dashboard' | 'tasks' | 'detail'
 
 export default function App() {
   const store = useStore()
   const [view, setView] = useState<View>('dashboard')
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [createCategory, setCreateCategory] = useState<TaskCategory | undefined>()
 
-  const selectedProject = selectedProjectId
-    ? store.projects.find(p => p.id === selectedProjectId) ?? null
+  const selectedTask = selectedTaskId
+    ? store.tasks.find(t => t.id === selectedTaskId) ?? null
     : null
 
-  const handleSelectProject = (id: string) => {
-    setSelectedProjectId(id)
+  const openCreate = (defaultCategory?: TaskCategory) => {
+    setCreateCategory(defaultCategory)
+    setShowCreate(true)
+  }
+
+  const handleCreate = (
+    category: TaskCategory,
+    title: string,
+    client: string,
+    deadline: string | null,
+    priority: Priority,
+  ) => {
+    const id = store.createTask(category, title, client, deadline, priority)
+    setSelectedTaskId(id)
     setView('detail')
   }
 
-  const handleCreateProject = (
-    name: string,
-    client: string,
-    category: ProjectCategory,
-    deadline: string | null,
-    useTemplate: boolean,
-  ) => {
-    const id = store.createProject(name, client, category, deadline, useTemplate)
-    setSelectedProjectId(id)
+  const handleSelectTask = (id: string) => {
+    setSelectedTaskId(id)
     setView('detail')
   }
+
+  const activeCount = store.tasks.filter(t => activeStatuses.includes(t.status)).length
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="font-bold text-gray-800 flex items-center gap-2 text-base">
-            <span className="text-blue-600">制作案件</span>管理システム
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          <h1 className="font-bold text-gray-800">
+            <span className="text-gray-500 font-normal text-sm">仕事</span> タスク管理
           </h1>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            onClick={() => openCreate()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors"
           >
-            <Plus size={16} /> 新規案件
+            <Plus size={15} /> 追加
           </button>
         </div>
       </header>
 
-      {/* Nav */}
+      {/* Bottom nav — visible only on non-detail views */}
       {view !== 'detail' && (
         <nav className="bg-white border-b">
-          <div className="max-w-5xl mx-auto px-4 flex gap-0">
+          <div className="max-w-2xl mx-auto px-4 flex">
             <button
               onClick={() => setView('dashboard')}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 view === 'dashboard'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-gray-800 text-gray-800'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >
-              <LayoutDashboard size={16} /> ダッシュボード
+              <LayoutDashboard size={15} /> ダッシュボード
             </button>
             <button
-              onClick={() => setView('projects')}
+              onClick={() => setView('tasks')}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                view === 'projects'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                view === 'tasks'
+                  ? 'border-gray-800 text-gray-800'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >
-              <FolderKanban size={16} /> 案件一覧
-              <span className="ml-1 text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
-                {store.projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length}
-              </span>
+              <ListTodo size={15} /> タスク一覧
+              {activeCount > 0 && (
+                <span className="ml-0.5 text-xs bg-gray-100 text-gray-600 rounded-full px-1.5 py-0.5">
+                  {activeCount}
+                </span>
+              )}
             </button>
           </div>
         </nav>
       )}
 
       {/* Main */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5">
         {view === 'dashboard' && (
-          <Dashboard
-            projects={store.projects}
-            onSelectProject={handleSelectProject}
+          <Dashboard tasks={store.tasks} onSelectTask={handleSelectTask} />
+        )}
+        {view === 'tasks' && (
+          <TaskList
+            tasks={store.tasks}
+            onSelectTask={handleSelectTask}
+            onCreateTask={openCreate}
           />
         )}
-        {view === 'projects' && (
-          <ProjectList
-            projects={store.projects}
-            onSelectProject={handleSelectProject}
-            onCreateProject={() => setShowCreateModal(true)}
-          />
-        )}
-        {view === 'detail' && selectedProject && (
-          <ProjectDetail
-            key={selectedProject.id}
-            project={selectedProject}
+        {view === 'detail' && selectedTask && (
+          <TaskDetail
+            key={selectedTask.id}
+            task={selectedTask}
             store={store}
-            onBack={() => setView('projects')}
+            onBack={() => setView('tasks')}
           />
         )}
-        {view === 'detail' && !selectedProject && (
+        {view === 'detail' && !selectedTask && (
           <div className="text-center py-16 text-gray-400">
-            <p>案件が見つかりません</p>
-            <button onClick={() => setView('projects')} className="mt-4 text-blue-600 hover:underline text-sm">
+            <p>タスクが見つかりません</p>
+            <button onClick={() => setView('tasks')} className="mt-4 text-gray-600 hover:underline text-sm">
               一覧に戻る
             </button>
           </div>
         )}
       </main>
 
-      {showCreateModal && (
-        <ProjectCreateModal
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateProject}
+      {showCreate && (
+        <TaskCreateModal
+          onClose={() => setShowCreate(false)}
+          onCreate={handleCreate}
+          defaultCategory={createCategory}
         />
       )}
     </div>

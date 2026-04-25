@@ -1,243 +1,177 @@
 import { useState, useCallback } from 'react'
 import {
-  Project, Task, SubTask, RelatedUrl, BillingInfo, DeliveryInfo,
-  ProjectCategory, ProjectStatus, TaskStatus, Priority,
+  Task, TaskCategory, TaskStatus, Priority,
+  SubTask, RelatedUrl, VideoFields, ProductionFields, ProductionType,
 } from '../types'
-import { loadProjects, saveProjects, generateId } from '../utils/storage'
-import { generateTemplateTasks } from '../utils/templates'
+import { loadTasks, saveTasks, generateId } from '../utils/storage'
 
-const persist = (projects: Project[]) => {
-  saveProjects(projects)
-  return projects
+const persist = (tasks: Task[]) => { saveTasks(tasks); return tasks }
+
+const defaultVideoFields = (): VideoFields => ({
+  materialUrl: '',
+  deliveryUrl: '',
+  revisionNote: '',
+})
+
+const defaultProductionFields = (): ProductionFields => ({
+  productionType: 'homepage',
+  currentProcess: '',
+  relatedUrls: [],
+})
+
+const makeTask = (
+  category: TaskCategory,
+  title: string,
+  client: string,
+  deadline: string | null,
+  priority: Priority,
+): Task => {
+  const now = new Date().toISOString()
+  return {
+    id: generateId(),
+    category,
+    title,
+    client,
+    deadline,
+    status: 'todo',
+    priority,
+    memo: '',
+    subtasks: [],
+    videoFields: defaultVideoFields(),
+    productionFields: defaultProductionFields(),
+    createdAt: now,
+    updatedAt: now,
+  }
 }
 
 export const useStore = () => {
-  const [projects, setProjects] = useState<Project[]>(() => loadProjects())
-
-  // --- Project CRUD ---
-  const createProject = useCallback((
-    name: string,
-    client: string,
-    category: ProjectCategory,
-    deadline: string | null,
-    useTemplate: boolean,
-  ): string => {
-    const id = generateId()
-    const now = new Date().toISOString()
-    const newProject: Project = {
-      id,
-      name,
-      client,
-      category,
-      status: 'active',
-      deadline,
-      tasks: useTemplate ? generateTemplateTasks(category) : [],
-      urls: [],
-      memo: '',
-      billing: { amount: null, status: 'unpaid', invoiceDate: null, paidDate: null, note: '' },
-      delivery: { deliveredAt: null, note: '' },
-      createdAt: now,
-      updatedAt: now,
-    }
-    setProjects(prev => persist([newProject, ...prev]))
-    return id
-  }, [])
-
-  const updateProject = useCallback((id: string, patch: Partial<Omit<Project, 'id' | 'createdAt'>>) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === id ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p
-    )))
-  }, [])
-
-  const deleteProject = useCallback((id: string) => {
-    setProjects(prev => persist(prev.filter(p => p.id !== id)))
-  }, [])
-
-  const updateProjectStatus = useCallback((id: string, status: ProjectStatus) => {
-    updateProject(id, { status })
-  }, [updateProject])
+  const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
 
   // --- Task CRUD ---
-  const addTask = useCallback((projectId: string, title: string, priority: Priority = 'medium') => {
-    const task: Task = {
-      id: generateId(),
-      title,
-      status: 'todo',
-      priority,
-      dueDate: null,
-      subtasks: [],
-      comments: [],
-      createdAt: new Date().toISOString(),
-    }
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? { ...p, tasks: [...p.tasks, task], updatedAt: new Date().toISOString() }
-        : p
-    )))
+  const createTask = useCallback((
+    category: TaskCategory,
+    title: string,
+    client: string,
+    deadline: string | null,
+    priority: Priority,
+  ): string => {
+    const task = makeTask(category, title, client, deadline, priority)
+    setTasks(prev => persist([task, ...prev]))
     return task.id
   }, [])
 
-  const updateTask = useCallback((projectId: string, taskId: string, patch: Partial<Task>) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? {
-            ...p,
-            tasks: p.tasks.map(t => t.id === taskId ? { ...t, ...patch } : t),
-            updatedAt: new Date().toISOString(),
-          }
-        : p
+  const updateTask = useCallback((id: string, patch: Partial<Task>) => {
+    setTasks(prev => persist(prev.map(t =>
+      t.id === id ? { ...t, ...patch, updatedAt: new Date().toISOString() } : t
     )))
   }, [])
 
-  const deleteTask = useCallback((projectId: string, taskId: string) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? { ...p, tasks: p.tasks.filter(t => t.id !== taskId), updatedAt: new Date().toISOString() }
-        : p
-    )))
+  const deleteTask = useCallback((id: string) => {
+    setTasks(prev => persist(prev.filter(t => t.id !== id)))
   }, [])
 
-  const updateTaskStatus = useCallback((projectId: string, taskId: string, status: TaskStatus) => {
-    updateTask(projectId, taskId, { status })
+  const updateStatus = useCallback((id: string, status: TaskStatus) => {
+    updateTask(id, { status })
   }, [updateTask])
 
-  // --- SubTask ---
-  const addSubTask = useCallback((projectId: string, taskId: string, title: string) => {
-    const sub: SubTask = { id: generateId(), title, done: false }
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? {
-            ...p,
-            tasks: p.tasks.map(t =>
-              t.id === taskId ? { ...t, subtasks: [...t.subtasks, sub] } : t
-            ),
-            updatedAt: new Date().toISOString(),
-          }
-        : p
+  // --- VideoFields ---
+  const updateVideoFields = useCallback((id: string, fields: Partial<VideoFields>) => {
+    setTasks(prev => persist(prev.map(t =>
+      t.id === id
+        ? { ...t, videoFields: { ...t.videoFields, ...fields }, updatedAt: new Date().toISOString() }
+        : t
     )))
   }, [])
 
-  const toggleSubTask = useCallback((projectId: string, taskId: string, subId: string) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? {
-            ...p,
-            tasks: p.tasks.map(t =>
-              t.id === taskId
-                ? { ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s) }
-                : t
-            ),
-            updatedAt: new Date().toISOString(),
-          }
-        : p
+  // --- ProductionFields ---
+  const updateProductionFields = useCallback((id: string, fields: Partial<ProductionFields>) => {
+    setTasks(prev => persist(prev.map(t =>
+      t.id === id
+        ? { ...t, productionFields: { ...t.productionFields, ...fields }, updatedAt: new Date().toISOString() }
+        : t
     )))
   }, [])
 
-  const deleteSubTask = useCallback((projectId: string, taskId: string, subId: string) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? {
-            ...p,
-            tasks: p.tasks.map(t =>
-              t.id === taskId ? { ...t, subtasks: t.subtasks.filter(s => s.id !== subId) } : t
-            ),
-            updatedAt: new Date().toISOString(),
-          }
-        : p
-    )))
-  }, [])
-
-  // --- Comment ---
-  const addComment = useCallback((projectId: string, taskId: string, text: string) => {
-    const comment = { id: generateId(), text, createdAt: new Date().toISOString() }
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? {
-            ...p,
-            tasks: p.tasks.map(t =>
-              t.id === taskId ? { ...t, comments: [...t.comments, comment] } : t
-            ),
-            updatedAt: new Date().toISOString(),
-          }
-        : p
-    )))
-  }, [])
-
-  const deleteComment = useCallback((projectId: string, taskId: string, commentId: string) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? {
-            ...p,
-            tasks: p.tasks.map(t =>
-              t.id === taskId ? { ...t, comments: t.comments.filter(c => c.id !== commentId) } : t
-            ),
-            updatedAt: new Date().toISOString(),
-          }
-        : p
-    )))
-  }, [])
-
-  // --- Related URLs ---
-  const addUrl = useCallback((projectId: string, label: string, url: string) => {
+  const addRelatedUrl = useCallback((taskId: string, label: string, url: string) => {
     const entry: RelatedUrl = { id: generateId(), label, url }
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? { ...p, urls: [...p.urls, entry], updatedAt: new Date().toISOString() }
-        : p
+    setTasks(prev => persist(prev.map(t =>
+      t.id === taskId
+        ? {
+            ...t,
+            productionFields: {
+              ...t.productionFields,
+              relatedUrls: [...t.productionFields.relatedUrls, entry],
+            },
+            updatedAt: new Date().toISOString(),
+          }
+        : t
     )))
   }, [])
 
-  const deleteUrl = useCallback((projectId: string, urlId: string) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? { ...p, urls: p.urls.filter(u => u.id !== urlId), updatedAt: new Date().toISOString() }
-        : p
+  const deleteRelatedUrl = useCallback((taskId: string, urlId: string) => {
+    setTasks(prev => persist(prev.map(t =>
+      t.id === taskId
+        ? {
+            ...t,
+            productionFields: {
+              ...t.productionFields,
+              relatedUrls: t.productionFields.relatedUrls.filter(u => u.id !== urlId),
+            },
+            updatedAt: new Date().toISOString(),
+          }
+        : t
     )))
   }, [])
 
-  // --- Billing ---
-  const updateBilling = useCallback((projectId: string, billing: Partial<BillingInfo>) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? { ...p, billing: { ...p.billing, ...billing }, updatedAt: new Date().toISOString() }
-        : p
+  // --- SubTasks ---
+  const addSubTask = useCallback((taskId: string, title: string) => {
+    const sub: SubTask = { id: generateId(), title, done: false }
+    setTasks(prev => persist(prev.map(t =>
+      t.id === taskId
+        ? { ...t, subtasks: [...t.subtasks, sub], updatedAt: new Date().toISOString() }
+        : t
     )))
   }, [])
 
-  // --- Delivery ---
-  const updateDelivery = useCallback((projectId: string, delivery: Partial<DeliveryInfo>) => {
-    setProjects(prev => persist(prev.map(p =>
-      p.id === projectId
-        ? { ...p, delivery: { ...p.delivery, ...delivery }, updatedAt: new Date().toISOString() }
-        : p
+  const toggleSubTask = useCallback((taskId: string, subId: string) => {
+    setTasks(prev => persist(prev.map(t =>
+      t.id === taskId
+        ? {
+            ...t,
+            subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s),
+            updatedAt: new Date().toISOString(),
+          }
+        : t
     )))
   }, [])
 
-  // --- Memo ---
-  const updateMemo = useCallback((projectId: string, memo: string) => {
-    updateProject(projectId, { memo })
-  }, [updateProject])
+  const deleteSubTask = useCallback((taskId: string, subId: string) => {
+    setTasks(prev => persist(prev.map(t =>
+      t.id === taskId
+        ? { ...t, subtasks: t.subtasks.filter(s => s.id !== subId), updatedAt: new Date().toISOString() }
+        : t
+    )))
+  }, [])
+
+  // --- Production type convenience ---
+  const setProductionType = useCallback((taskId: string, productionType: ProductionType) => {
+    updateProductionFields(taskId, { productionType })
+  }, [updateProductionFields])
 
   return {
-    projects,
-    createProject,
-    updateProject,
-    deleteProject,
-    updateProjectStatus,
-    addTask,
+    tasks,
+    createTask,
     updateTask,
     deleteTask,
-    updateTaskStatus,
+    updateStatus,
+    updateVideoFields,
+    updateProductionFields,
+    addRelatedUrl,
+    deleteRelatedUrl,
     addSubTask,
     toggleSubTask,
     deleteSubTask,
-    addComment,
-    deleteComment,
-    addUrl,
-    deleteUrl,
-    updateBilling,
-    updateDelivery,
-    updateMemo,
+    setProductionType,
   }
 }
 
