@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Project, ProjectStatus, BillingStatus } from '../types'
 import {
-  categoryLabel, categoryColor, statusLabel, statusColor,
+  categoryLabel, categoryColor, statusLabel,
   billingStatusLabel, billingStatusColor, taskStatusLabel,
 } from '../utils/templates'
 import { Badge } from './Badge'

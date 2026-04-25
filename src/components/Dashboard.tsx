@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Project, Task } from '../types'
 import {
   categoryLabel, categoryColor, statusLabel, statusColor,
-  taskStatusLabel, taskStatusColor, priorityColor,
+  taskStatusLabel, taskStatusColor,
 } from '../utils/templates'
 import { Badge } from './Badge'
 import {
@@ -53,8 +53,6 @@ interface UpcomingTask {
 }
 
 export const Dashboard = ({ projects, onSelectProject }: DashboardProps) => {
-  const today = new Date().setHours(0, 0, 0, 0)
-
   const stats = useMemo(() => {
     const active = projects.filter(p => p.status === 'active').length
     const waiting = projects.filter(p => p.status === 'waiting').length
